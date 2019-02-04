@@ -9,23 +9,25 @@ var connection = mysql.createConnection({
 
 var inquirer = require('inquirer');
 
-var cart = {
-    total: function () {
-        var grandTotal = 0;
-        var keys = Object.keys(cart);
-        var total = keys.indexOf("total");
-        keys.splice(total);
-        keys.forEach(product => {
+var cart = {};
 
-            var total = cart[product].Total;
-            grandTotal += total;
-        });
-        console.log(`___________________`);
-        console.log(`TOTAL: $${grandTotal}`);
-        console.log(`___________________`);
-        console.log("");
-    },
-};
+function claculateTotal() {
+    var grandTotal = 0;
+    var keys = Object.keys(cart);
+    var total = keys.indexOf("total");
+    keys.splice(total);
+    keys.forEach(product => {
+
+        var total = cart[product].Total;
+        grandTotal += total;
+    });
+
+    console.log(`___________________`);
+    console.log(`TOTAL: $${grandTotal}`);
+    console.log(`___________________`);
+    console.log("");
+}
+
 connection.connect();
 
 //initial display of products
@@ -112,7 +114,7 @@ function printCart() {
 
     });
     console.table(printCart);
-    cart.total();
+    claculateTotal();
 
 }
 
@@ -124,7 +126,7 @@ function readyToCheckOut() {
                 type: "list",
                 name: "Checkout",
                 message: "What would you like to do next?",
-                choices: ["Check Out", "Keep Shopping", "View Cart"],
+                choices: ["Check Out", "Keep Shopping", "View Cart", "Quit"],
             }
         ])
         .then(answers => {
@@ -134,6 +136,9 @@ function readyToCheckOut() {
             } else if (answers.Checkout === "View Cart") {
                 printCart();
                 readyToCheckOut();
+            } else if (answers.Checkout === "Quit") {
+                console.log(`Thank you! Come Again!!!`);
+                connection.end();
             } else {
                 showProducts();
             }
@@ -144,19 +149,20 @@ function checkOut() {
     var cartItems = Object.keys(cart);
     var removeTotal = cartItems.indexOf("total");
     cartItems.splice(removeTotal, removeTotal + 1);
-    console.log(cartItems);
     cartItems.forEach(function (item) {
         var newquantity;
+        
         connection.query('SELECT * FROM products', function (error, results) {
-            if (error) throw error;
-            console.table(results);
-            console.log(item);
+            if (error) throw error;    
+            //console.log(item);
             var id = Number(item) - 1;
+            var sales = cart[item].Total;
+            //console.log(sales);
             var quantity = results[id].stock_quantity;
             var cartQuantity = cart[item].Quantity;
-            console.log(cart);
+            //console.log(cart);
             newquantity = Number(quantity) - Number(cartQuantity);
-            console.log(newquantity);
+            
             if(newquantity < 0){
 
                 console.log(`Insufficient quantity of ${cart[item].Name}`);
@@ -168,10 +174,21 @@ function checkOut() {
 
             }else{
                 updateInventory(newquantity, item);
+                //updateProductSales(sales, id);
+                emptyCart();
             }
             
         });
     });
+
+    function emptyCart(){
+        var keys = Object.keys(cart);
+        for(var i = 0; i < keys.length; i++){
+            var currentKey = keys[i];
+            delete cart[currentKey];
+        }
+    }
+
     function quitOrRestart() {
 
         console.clear();
@@ -188,9 +205,11 @@ function checkOut() {
             .then(answers => {
                 // Use user feedback for... whatever!!
                 if (answers.Quit === "Quit") {
+                    console.log(`Thank you! Come Again!!!`);
                     connection.end();
                 } else {
                     showProducts();
+                    
                 }
             });
 
@@ -201,6 +220,14 @@ function checkOut() {
 
 function updateInventory(quantity, id) {
     connection.query("UPDATE products SET stock_quantity = ? WHERE item_id = ?", [quantity, id], function (err, res) {
+        if (err) throw err;
+        //console.log(res);
+        //printProductsDB();
+    });
+}
+
+function updateProductSales(sales, id){
+    connection.query("UPDATE products SET stock_quantity = ? WHERE item_id = ?", [sales, id], function (err, res) {
         if (err) throw err;
         console.log(res);
         printProductsDB();
@@ -214,5 +241,10 @@ function printProductsDB() {
     });
 }
 
+
+    
 showProducts();
+
+
+
 
