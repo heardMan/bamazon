@@ -14,12 +14,14 @@ When it comes down to it there are 3 thing that make Bamazon the most powerful b
 
 1 Customer Shopping Interface
 
+    Bamazon is designed with shoppers 
     
+    ![Image of concert-this input/output](https://github.com/heardMan/liri-node-app/blob/master/concert-this.png)
 
 2 The Store Management Interface
 
-
+    Feature still under development.
 
 3 The Administration Interface
 
-
+    Feature still under development.

@@ -7,19 +7,27 @@ var connection = mysql.createConnection({
     database: 'bamazon'
 });
 
+
+var pool  = mysql.createPool({
+    connectionLimit : 10,
+    host            : 'localhost',
+    user            : 'root',
+    password        : 'password',
+    database        : 'bamazon'
+  });
+
+
 var inquirer = require('inquirer');
 
 var cart = {};
 
-function claculateTotal() {
+function calculateTotal() {
     var grandTotal = 0;
     var keys = Object.keys(cart);
-    var total = keys.indexOf("total");
-    keys.splice(total);
     keys.forEach(product => {
+        var subtotal = cart[product].Total;
+        grandTotal += Number(subtotal);
 
-        var total = cart[product].Total;
-        grandTotal += total;
     });
 
     console.log(`___________________`);
@@ -28,11 +36,12 @@ function claculateTotal() {
     console.log("");
 }
 
-connection.connect();
+//connection.connect();
 
 //initial display of products
-function showProducts() {
-
+function showProducts(callback) {
+    callback();
+    
     connection.query('SELECT * FROM products', function (error, results, fields) {
         if (error) throw error;
         console.log(`WELCOME TO BAMAZON!`);
@@ -46,11 +55,14 @@ function showProducts() {
         });
         console.table(listings);
         //ask user to enter in an item id
-        axWutProduct();
+        console.log("Press any key to continue");
+        connection.release();
     });
+    
 }
 //ask user which product they would like to purcchase
 function axWutProduct() {
+    //connection.connect();
     inquirer
         .prompt([
             /* Pass your questions in here */
@@ -67,7 +79,7 @@ function axWutProduct() {
 }
 
 function getProduct(id) {
-    //connection.connect();
+   
     connection.query('SELECT * FROM products WHERE item_id = ?', [id], function (error, results) {
         if (error) throw error;
         var productID = results[0].item_id;
@@ -100,7 +112,6 @@ function getProduct(id) {
                 }
                 readyToCheckOut();
 
-
             });
     });
 }
@@ -114,7 +125,7 @@ function printCart() {
 
     });
     console.table(printCart);
-    claculateTotal();
+    calculateTotal();
 
 }
 
@@ -140,46 +151,41 @@ function readyToCheckOut() {
                 console.log(`Thank you! Come Again!!!`);
                 connection.end();
             } else {
-                showProducts();
+                showProducts(axWutProduct);
             }
         });
 }
 
 function checkOut() {
+    // console.log(cart);
     var cartItems = Object.keys(cart);
-    var removeTotal = cartItems.indexOf("total");
-    cartItems.splice(removeTotal, removeTotal + 1);
+    // console.log(cartItems);
     cartItems.forEach(function (item) {
-        var newquantity;
-        
+        console.log(cart[item].Quantity);
+        var cartQuantity = cart[item].Quantity;
         connection.query('SELECT * FROM products', function (error, results) {
             if (error) throw error;    
-            //console.log(item);
-            var id = Number(item) - 1;
-            var sales = cart[item].Total;
-            //console.log(sales);
+            var id = item;
+            console.log("\n");
+            console.log(id);
             var quantity = results[id].stock_quantity;
-            var cartQuantity = cart[item].Quantity;
-            //console.log(cart);
-            newquantity = Number(quantity) - Number(cartQuantity);
             
+            var newquantity = Number(quantity) - Number(cartQuantity);
             if(newquantity < 0){
-
                 console.log(`Insufficient quantity of ${cart[item].Name}`);
                 console.log(`____________________________________________`);
                 console.log(`We apologize for the inconvience and have removed the out of stock items from your cart.`);
                 console.log(`Please take a moment to review the updates made to your cart`);
                 printCart();
-                
-
             }else{
                 updateInventory(newquantity, item);
-                //updateProductSales(sales, id);
                 emptyCart();
+                quitOrRestart();
             }
             
         });
     });
+
 
     function emptyCart(){
         var keys = Object.keys(cart);
@@ -206,15 +212,15 @@ function checkOut() {
                 // Use user feedback for... whatever!!
                 if (answers.Quit === "Quit") {
                     console.log(`Thank you! Come Again!!!`);
-                    connection.end();
+                    
                 } else {
-                    showProducts();
+                    showProducts(axWutProduct);
                     
                 }
             });
 
     }
-    quitOrRestart();
+    
 
 }
 
@@ -243,7 +249,7 @@ function printProductsDB() {
 
 
     
-showProducts();
+showProducts(axWutProduct);
 
 
 
